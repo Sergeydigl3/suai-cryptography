@@ -1,3 +1,6 @@
+import random
+
+
 class JeffersonCylinder:
     def __init__(self, disks):
         self.disks = disks
@@ -7,7 +10,11 @@ class JeffersonCylinder:
         for i, char in enumerate(message):
             if char.isalpha():
                 disk = self.disks[i % len(self.disks)]
-                index = ord(char.upper()) - ord('A')
+                if char in ru_alphabet:
+                    alphabet_language_start = ord('А')
+                else:
+                    alphabet_language_start = ord('A')
+                index = ord(char.upper()) - alphabet_language_start
                 encrypted_message.append(disk[index])
             else:
                 encrypted_message.append(char)
@@ -20,7 +27,11 @@ class JeffersonCylinder:
             if char.isalpha():
                 disk = self.disks[i % len(self.disks)]
                 index = disk.find(char.upper())
-                decrypted_message.append(chr(ord('A') + index))
+                if char in ru_alphabet:
+                    alphabet_language_start = ord('А')
+                else:
+                    alphabet_language_start = ord('A')
+                decrypted_message.append(chr(alphabet_language_start + index))
             else:
                 decrypted_message.append(char)
 
@@ -72,6 +83,10 @@ def frequency_analysis(text):
     return frequency
 
 
+ru_alphabet = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЫЬЪЭЮЯ"
+en_alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+mixed_ru_alphabet = random.sample(ru_alphabet, len(ru_alphabet))
 # Example usage:
 disks = [
     "DMTWSILRUYQNKFEJCAZBPGXOHV",
@@ -79,10 +94,19 @@ disks = [
     "BHIPLTXNZRFYGKQJSOCEVUAMWD",
 ]
 
-ru_disks = [
-    "АОЬЫЪХЮЁЩШЦЧЭЖГФЗЙЪЬЫЪХЮ",
-    "ЁЩШЦЧЭЖГФЗЙЪЬЫЪХЮЁЩШЦЧЭ",
-    "ЖГФЗЙЪЬЫЪХЮЁЩШЦЧЭЖГФЗЙ",
+ru_disks_random = [
+    # as str
+    ''.join(random.sample(ru_alphabet, len(ru_alphabet))),
+    ''.join(random.sample(ru_alphabet, len(ru_alphabet))),
+    ''.join(random.sample(ru_alphabet, len(ru_alphabet))),
+]
+
+mixed_universal_alphabet = random.sample(en_alphabet + ru_alphabet, len(en_alphabet + ru_alphabet))
+
+mixed_universal_disks = [
+    ''.join(random.sample(mixed_universal_alphabet, len(mixed_universal_alphabet))),
+    ''.join(random.sample(mixed_universal_alphabet, len(mixed_universal_alphabet))),
+    ''.join(random.sample(mixed_universal_alphabet, len(mixed_universal_alphabet))),
 ]
 
 ru_disks_metoda = [
@@ -95,9 +119,9 @@ ru_disks_metoda = [
 ]
 
 if __name__ == '__main__':
-    cylinder = JeffersonCylinder(disks)
+    cylinder = JeffersonCylinder2(disks)
     cylinder_metoda = JeffersonCylinder2(ru_disks_metoda)
-    cylinder_ru = JeffersonCylinder2(ru_disks)
+    cylinder_ru = JeffersonCylinder2(ru_disks_random)
 
     message = "HELLO WORLD"
     message_ru = "ПРИВЕТ МИР"
@@ -105,7 +129,7 @@ if __name__ == '__main__':
 
     encrypted_message = cylinder.encrypt(message)
     decrypted_message = cylinder.decrypt(encrypted_message)
-
+    print("ENGLISH ALPHABET")
     print(f"Original message: {message}")
     print(f"Encrypted message: {encrypted_message}")
     print(f"Decrypted message: {decrypted_message}\n\n")
@@ -114,7 +138,7 @@ if __name__ == '__main__':
 
     encrypted_message = cylinder_ru.encrypt(message_ru)
     decrypted_message = cylinder_ru.decrypt(encrypted_message)
-
+    print("RUSSIAN ALPHABET")
     print(f"Original message: {message_ru}")
     print(f"Encrypted message: {encrypted_message}")
     print(f"Decrypted message: {decrypted_message}\n\n")
@@ -123,10 +147,20 @@ if __name__ == '__main__':
 
     encrypted_message = cylinder_metoda.encrypt(message_metoda)
     decrypted_message = cylinder_metoda.decrypt(encrypted_message)
-
+    print("METODA ALPHABET")
     print(f"Original message: {message_metoda}")
     print(f"Encrypted message: {encrypted_message}")
     print(f"Decrypted message: {decrypted_message}\n\n")
 
     # freq_analysis_result = frequency_analysis(encrypted_message)
     # print(f"Frequency analysis: {freq_analysis_result}")
+
+    print("MIXED ALPHABET")
+    cylinder_mixed = JeffersonCylinder(mixed_universal_disks)
+    message_mixed = "HELLO МИР1ВСЕМ"
+    encrypted_message = cylinder_mixed.encrypt(message_mixed)
+    decrypted_message = cylinder_mixed.decrypt(encrypted_message)
+    print(f"Original message: {message_mixed}")
+    print(f"Encrypted message: {encrypted_message}")
+    print(f"Decrypted message: {decrypted_message}\n\n")
+
