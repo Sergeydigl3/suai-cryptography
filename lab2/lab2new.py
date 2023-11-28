@@ -23,7 +23,7 @@ class JeffersonCylinder2BlockCipher:
 
         decrypted_data = bytearray()
 
-        for i in range(0, len(data) - self.block_size, self.block_size):
+        for i in range(0, len(data) - 2 * self.block_size, self.block_size):
             block = data[i:i + self.block_size]
             decrypted_block = self.decrypt_block(block)
             decrypted_data.extend(decrypted_block)
@@ -60,13 +60,15 @@ class JeffersonCylinder2BlockCipher:
 
         # last block is Int padded bytes
 
-        encrypted_data.extend(padding_size.to_bytes(self.block_size, byteorder='big'))
+        # encrypted_data.extend(padding_size.to_bytes(self.block_size, byteorder='big'))
 
         return encrypted_data
 
     def encrypt_cbc(self, data, iv):
         encrypted_data = bytearray()
-        padding_size = 0
+        padding_size = len(data) % self.block_size
+        encrypted_data.extend(padding_size.to_bytes(4, byteorder='big'))
+        print(padding_size)
         for i in range(0, len(data), self.block_size):
             block = data[i:i + self.block_size]
             if len(block) < self.block_size:
@@ -76,14 +78,12 @@ class JeffersonCylinder2BlockCipher:
             encrypted_block = self.encrypt_block(block)
             encrypted_data.extend(encrypted_block)
             iv = encrypted_block
-
+        print(padding_size)
         # last block is Int padded bytes
-
-        encrypted_data.extend(padding_size.to_bytes(self.block_size, byteorder='big'))
 
         return encrypted_data
 
-    def decrypt_cbc(self, data, iv):
+    def decrypt_cbc(self, data, iv, padding_size=0):
         decrypted_data = bytearray()
         for i in range(0, len(data) - self.block_size, self.block_size):
             block = data[i:i + self.block_size]
@@ -92,12 +92,14 @@ class JeffersonCylinder2BlockCipher:
             decrypted_data.extend(decrypted_block)
             iv = block
 
-        padding_size = int.from_bytes(data[-self.block_size:], byteorder='big')
-        last_block = data[-self.block_size * 2:-self.block_size]
+        # padding_size = int.from_bytes(data[-self.block_size:], byteorder='big')
+        last_block = data[-self.block_size:]
         decrypted_block = self.decrypt_block(last_block)
         decrypted_block = bytes([a ^ b for a, b in zip(decrypted_block, iv)])
         if padding_size != 0:
             decrypted_data.extend(decrypted_block[:-padding_size])
+        else:
+            decrypted_data.extend(decrypted_block)
         return decrypted_data
 
     @staticmethod
@@ -134,6 +136,86 @@ class JeffersonCylinder2BlockCipher:
         return disks
 
 
+import struct
+from PIL import Image, ImageDraw, ImageFont
+
+
+def add_text_to_image(input_image_path, output_image_path, text_to_add):
+    # copy file to new file
+    # with open(input_image_path, 'rb') as f:
+    #     with open(output_image_path, 'wb') as f2:
+    #         f2.write(f.read())
+    try:
+        original_image = open(input_image_path, 'rb')
+        original_header = original_image.read(10)
+        offset_bytes = original_image.read(4)
+        original_header += offset_bytes
+        offset = struct.unpack('I', offset_bytes)[0]
+        original_image.read(20)
+        image_array_size = struct.unpack('I', original_image.read(4))[0]
+        print(image_array_size)
+        print("ALERT")
+        # width_bytes = struct.unpack('I', original_image.read(4))[0]
+        # height_bytes = struct.unpack('I', original_image.read(4))[0]
+
+        # original_header += original_image.read(offset - 14)
+
+        original_image.close()
+
+
+        # Открытие изображения
+        image = Image.open(input_image_path)
+
+
+        # Создание объекта для рисования
+        draw = ImageDraw.Draw(image)
+
+        # Загрузка шрифта
+        font = ImageFont.load_default()
+
+        # Масштабирование шрифта до нужного размера
+
+        # Определение позиции текста
+        text_position = (20, 20)  # Позиция, в которой будет нарисован текст
+
+        # Нанесение текста на изображение
+        draw.text(text_position, text_to_add, fill="black", font=font)
+
+        # Сохранение измененного изображения
+        image.save(output_image_path)
+        # new_file = open(output_image_path, 'wb')
+        # i
+        print(f"Текст успешно добавлен в {output_image_path}")
+
+    except Exception as e:
+        print(f"Произошла ошибка: {str(e)}")
+
+# def add_text_to_image(input_image_path, output_image_path, text_to_add):
+#     try:
+#         image = Image.open(input_image_path)
+#         draw = ImageDraw.Draw(image)
+#
+#         font = ImageFont.load_default()
+#
+#         width, height = image.size
+#         cell_width = 20
+#         cell_height = 20
+#
+#         for y in range(0, height, cell_height):
+#             for x in range(0, width, cell_width):
+#                 text_width, text_height = draw.textsize(text_to_add, font=font)
+#                 text_position = (x, y)
+#                 if text_position[0] + text_width <= width and text_position[1] + text_height <= height:
+#                     draw.text(text_position, text_to_add, fill="black", font=font)
+#
+#         # Сохранение измененного изображения
+#         image.save(output_image_path)
+#         print(f"Текст успешно добавлен в {output_image_path}")
+#
+#     except Exception as e:
+#         print(f"Произошла ошибка: {str(e)}")
+
+
 class CryptoWrapper:
     def __init__(self, cipher):
         self.cipher = cipher
@@ -144,16 +226,15 @@ class CryptoWrapper:
     def decrypt(self, data):
         return self.cipher.decrypt(data)
 
-    def encrypt_file(self, filename, output_filename=None, bmp=False, mode='ECB'):
-        if output_filename is None:
-            if bmp:
-                output_filename = filename + '.enc.bmp'
-            else:
-                output_filename = filename + '.enc'
+    def encrypt_file(self, filename, output_filename, bmp=False, mode='ECB'):
 
         with open(filename, 'rb') as f:
+
             if bmp:
-                bmp_header = f.read(54)
+                bmp_header = f.read(10)
+                offset = struct.unpack('I', f.read(4))[0]
+                bmp_header += (offset + 4).to_bytes(4, byteorder='little')
+                bmp_header += f.read(offset - 14)
             data = f.read()
 
         # encrypted_data = self.encrypt(data)
@@ -169,21 +250,24 @@ class CryptoWrapper:
                 f.write(bmp_header)
             f.write(encrypted_data)
 
-    def decrypt_file(self, filename, output_filename=None, bmp=False, mode='ECB'):
-        if output_filename is None:
-            output_filename = filename + '.dec'
+    def decrypt_file(self, filename, output_filename, bmp=False, mode='ECB'):
 
         with open(filename, 'rb') as f:
 
             if bmp:
-                bmp_header = f.read(54)
+                bmp_header = f.read(10)
+                offset = struct.unpack('I', f.read(4))[0]
+                bmp_header += (offset - 4).to_bytes(4, byteorder='little')
+                bmp_header += f.read(offset - 18)
+            padding_size = int.from_bytes(f.read(4), byteorder='little')
+
 
             data = f.read()
 
         if mode == 'ECB':
             decrypted_data = self.decrypt(data)
         elif mode == 'CBC':
-            decrypted_data = self.cipher.decrypt_cbc(data, b'\x00' * self.cipher.block_size)
+            decrypted_data = self.cipher.decrypt_cbc(data, b'\x00' * self.cipher.block_size, padding_size=padding_size)
         else:
             raise ValueError('Unknown mode')
 
