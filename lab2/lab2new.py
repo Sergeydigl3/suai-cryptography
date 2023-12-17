@@ -29,6 +29,7 @@ class JeffersonCylinder2BlockCipher:
             decrypted_data.extend(decrypted_block)
 
         padding_size = int.from_bytes(data[-self.block_size:], byteorder='big')
+        padding_size = 0
         last_block = data[-self.block_size * 2:-self.block_size]
         decrypted_block = self.decrypt_block(last_block)
         if padding_size != 0:
@@ -47,7 +48,7 @@ class JeffersonCylinder2BlockCipher:
 
         return block
 
-    def encrypt(self, data):
+    def encrypt(self, data, dop_task=True):
         encrypted_data = bytearray()
         padding_size = 0
         for i in range(0, len(data), self.block_size):
@@ -55,6 +56,10 @@ class JeffersonCylinder2BlockCipher:
             if len(block) < self.block_size:
                 padding_size = self.block_size - len(block)
                 block = block + b'\x00' * padding_size
+                # invert half of the block
+            if dop_task:
+                for i in range(self.block_size // 2):
+                    block[i] = block[i] ^ block[self.block_size - i - 1]
             encrypted_block = self.encrypt_block(block)
             encrypted_data.extend(encrypted_block)
 
@@ -103,7 +108,7 @@ class JeffersonCylinder2BlockCipher:
         return decrypted_data
 
     @staticmethod
-    def generate_disks(disk_count=16) -> list[bytes]:
+    def generate_disks(disk_count=16):
 
         all_bytes = bytearray()  # 256 bytes
         for i in range(256):
